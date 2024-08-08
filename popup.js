@@ -3,50 +3,29 @@
 const lc_api = 'https://leetcode-stats-api.herokuapp.com/';
 
 document.addEventListener('DOMContentLoaded', function () {
-  const addUserBtn = document.getElementById('add-user-btn');
-  const addUserInput = document.getElementById('add-user-input');
+  const addUserButton = document.getElementById('add-user-btn');
+  addUserButton.addEventListener('click', () => {
+    const input = document.getElementById('add-user-input').value;
+    if (input) {
+      fetch(lc_api + input)
+        .then((rsp) => rsp.json())
+        .then((jsdata) => {
+          if (jsdata.status === "error") {
+            throw new Error("Invalid username");
+          } else {
+            enterUser(input, jsdata);
+          }
+        })
+        .catch((err) => {
+          window.alert(err.message);
+        });
+    } else {
+      window.alert("Please enter valid username");
+    }
+    document.getElementById('add-user-input').value = '';
+  });
 
-  if (addUserBtn && addUserInput) {
-    addUserBtn.addEventListener('click', () => {
-      const input = addUserInput.value;
-      if (input) {
-        fetch(lc_api + input)
-          .then((rsp) => rsp.json())
-          .then((jsdata) => {
-            if (jsdata.status === 'error') {
-              throw new Error('Invalid username');
-            } else {
-              enterUser(input, jsdata);
-            }
-          })
-          .catch((err) => {
-            window.alert(err.message);
-          });
-      } else {
-        window.alert('Please enter a valid username');
-      }
-      addUserInput.value = '';
-    });
-  } else {
-    console.error('Add user button or input field not found.');
-  }
-
-  if (chrome.storage && chrome.storage.sync) {
-    chrome.storage.sync.get(['lc_users'], ({ lc_users }) => {
-      const users = lc_users || [];
-      if (users.length !== 0) {
-        for (const user of users) {
-          renderTableRow(user);
-        }
-      }
-    });
-  } else {
-    console.error('chrome.storage.sync is not available.');
-  }
-});
-
-function enterUser(user, jsdata) {
-  if (chrome.storage && chrome.storage.sync) {
+  function enterUser(user, jsdata) {
     chrome.storage.sync.get('lc_users', ({ lc_users }) => {
       const users = lc_users || [];
       if (!users.includes(user)) {
@@ -55,14 +34,10 @@ function enterUser(user, jsdata) {
         createRow(user, jsdata);
       }
     });
-  } else {
-    console.error('chrome.storage.sync is not available.');
   }
-}
 
-function createRow(user, jsdata) {
-  const table = document.getElementById('tableBody');
-  if (table) {
+  function createRow(user, jsdata) {
+    const table = document.getElementById('tableBody');
     const row = document.createElement('tr');
     row.setAttribute('id', user);
 
@@ -91,23 +66,35 @@ function createRow(user, jsdata) {
     row.appendChild(c4);
 
     const c5 = document.createElement('td');
+    c5.textContent = jsdata.acceptanceRate;
+    row.appendChild(c5);
+
+    const c6 = document.createElement('td');
+    c6.textContent = jsdata.ranking;
+    row.appendChild(c6);
+
+    const c7 = document.createElement('td');
+    c7.textContent = jsdata.contributionPoints;
+    row.appendChild(c7);
+
+    const c8 = document.createElement('td');
+    c8.textContent = jsdata.reputation;
+    row.appendChild(c8);
+
+    const c9 = document.createElement('td');
     const btn = document.createElement('button');
     btn.innerHTML = 'Delete';
     btn.classList.add('btn', 'btn-danger', 'btn-sm', 'btn-rounded', 'delete-btn');
     btn.setAttribute('data-field', user);
     btn.setAttribute('type', 'button');
-    btn.addEventListener('click', () => delete_user(user));
-    c5.appendChild(btn);
-    row.appendChild(c5);
+    btn.onclick = () => delete_user(user);
+    c9.appendChild(btn);
+    row.appendChild(c9);
 
     table.appendChild(row);
-  } else {
-    console.error('Table body element not found.');
   }
-}
 
-function delete_user(user) {
-  if (chrome.storage && chrome.storage.sync) {
+  function delete_user(user) {
     chrome.storage.sync.get('lc_users', ({ lc_users }) => {
       const users = lc_users || [];
       if (users.includes(user)) {
@@ -116,25 +103,28 @@ function delete_user(user) {
         const elementToRemove = document.getElementById(user);
         if (elementToRemove) {
           elementToRemove.remove();
-        } else {
-          console.error('Element to remove not found:', user);
         }
-      } else {
-        console.error('User not found in storage:', user);
       }
     });
-  } else {
-    console.error('chrome.storage.sync is not available.');
   }
-}
 
-function renderTableRow(user) {
-  fetch(lc_api + user)
-    .then((rsp) => rsp.json())
-    .then((jsdata) => {
-      createRow(user, jsdata);
-    })
-    .catch((err) => {
-      window.alert(err.message);
-    });
-}
+  function renderTableRow(user) {
+    fetch(lc_api + user)
+      .then((rsp) => rsp.json())
+      .then((jsdata) => {
+        createRow(user, jsdata);
+      })
+      .catch((err) => {
+        window.alert(err.message);
+      });
+  }
+
+  chrome.storage.sync.get(['lc_users'], ({ lc_users }) => {
+    const users = lc_users || [];
+    if (users.length !== 0) {
+      for (const user of users) {
+        renderTableRow(user);
+      }
+    }
+  });
+});
